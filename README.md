@@ -397,6 +397,6 @@ amiibo_converter/
 
 ---
 
-**Amiibo Converter** - Amiiboファイル生成ツール
+**Amiibo Generator** - Amiiboファイル生成ツール
 
 *最終更新日: 2025年12月15日*
