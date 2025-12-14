@@ -89,7 +89,93 @@ class AmiiboGenerator:
         
         return name
     
-    def create_amiibo_data_structure(self, head: str, tail: str) -> Optional[bytes]:
+    def build_identification_block(self, head: str, tail: str, amiibo_type: str, series: str) -> bytes:
+        """
+        Amiibo Identification BlockをAPIデータから構築
+        """
+        id_block = bytearray(8)
+        
+        try:
+            # Game & Character ID（head[:6] + tail[:2]）
+            game_char_hex = head[:6] + tail[:2]
+            game_char_id = int(game_char_hex, 16)
+            # 2バイトに制限（0xFFFF = 65535）
+            game_char_id = game_char_id & 0xFFFF
+            id_block[0:2] = game_char_id.to_bytes(2, 'big')
+            
+            # Character variant（head[6:8]）
+            if len(head) >= 8:
+                char_variant = int(head[6:8], 16)
+                # 1バイトに制限（0xFF = 255）
+                id_block[2] = char_variant & 0xFF
+            else:
+                id_block[2] = 0x00
+            
+            # Amiibo Figure Type
+            type_mapping = {
+                'Card': 0x00,
+                'Figure': 0x01,
+                'Band': 0x02,
+                'Yarn': 0x03,
+                'Block': 0x04
+            }
+            id_block[3] = type_mapping.get(amiibo_type, 0x01)
+            
+            # Amiibo Model Number（head[2:4] + tail[2:4]）
+            model_hex = head[2:4] + tail[2:4]
+            model_number = int(model_hex, 16) & 0xFFFF
+            id_block[4:6] = model_number.to_bytes(2, 'big')
+            
+            # Amiibo Series
+            series_mapping = {
+                'Animal Crossing': 0x00,
+                'Super Smash Bros.': 0x01,
+                'Mario Sports Superstars': 0x02,
+                'Legend Of Zelda': 0x03,
+                'Splatoon': 0x04,
+                'Street Fighter 6': 0x05,
+                'Super Mario Bros.': 0x06,
+                'Monster Hunter': 0x07,
+                'Monster Hunter Rise': 0x08,
+                'Yoshi\'s Woolly World': 0x09,
+                'My Mario Wooden Blocks': 0x0A,
+                'Super Nintendo World': 0x0B,
+                'Fire Emblem': 0x0C,
+                'Pokemon': 0x0D,
+                'Kirby': 0x0E,
+                'Metroid': 0x0F,
+                'Others': 0x10
+            }
+            id_block[6] = series_mapping.get(series, 0x00)
+            
+            # Format Version（常に0x02）
+            id_block[7] = 0x02
+            
+            return bytes(id_block)
+            
+        except Exception as e:
+            print(f"Warning: Could not build ID block: {e}")
+            # デフォルト値を返す
+            return b'\x00\x00\x00\x00\x01\x00\x00\x02'
+    
+    def apply_type_specific_init(self, dump, amiibo_type: str, series: str):
+        """
+        タイプ固有の初期化データを適用
+        """
+        # Cardタイプの初期化
+        if amiibo_type == 'Card' and series == 'Animal Crossing':
+            # Country Code（0x208-0x210）
+            dump.data[0x208:0x210] = b'\x00' * 8
+            # Write Counter（0x20C-0x20E）
+            dump.data[0x20C:0x20E] = b'\x00\x00'
+        
+        # Figureタイプの初期化
+        elif amiibo_type == 'Figure':
+            # Smash Bros. AppID（0x180-0x184）
+            if series == 'Super Smash Bros.':
+                dump.data[0x180:0x184] = b'\x00\x10\x11\x0E'
+    
+    def create_amiibo_data_structure(self, head: str, tail: str, amiibo_type: str = 'Figure', series: str = 'Unknown Series') -> Optional[bytes]:
         """
         Amiiboデータ構造を作成する（テンプレートベース）
         """
@@ -114,13 +200,20 @@ class AmiiboGenerator:
             new_uid_7bytes = existing_first_byte + new_uid_suffix[:12]
             new_dump.uid_hex = new_uid_7bytes
             
+            # Amiibo Identification Blockを更新（0x54-0x5C）
+            id_block = self.build_identification_block(head, tail, amiibo_type, series)
+            new_dump.data[0x54:0x5C] = id_block
+            
+            # タイプ固有の初期化データを適用
+            self.apply_type_specific_init(new_dump, amiibo_type, series)
+            
             # 暗号化してロック
             new_dump.lock()
             
             return bytes(new_dump.data)
-        else:
-            print(f"Error: Template file '{template_file}' not found")
-            return None
+        
+        print(f"Error: Template file '{template_file}' not found")
+        return None
     
     def create_series_directory(self, output_dir: str, series: str) -> str:
         """
@@ -142,13 +235,15 @@ class AmiiboGenerator:
         try:
             head = amiibo_info.get('head', '')
             tail = amiibo_info.get('tail', '')
+            amiibo_type = amiibo_info.get('type', 'Figure')
+            series = amiibo_info.get('amiiboSeries', '')
             
             if not head or not tail:
                 print(f"Warning: Missing head/tail for {amiibo_info.get('name', 'Unknown')}")
                 return None
             
             # Amiiboデータ構造を作成
-            amiibo_data = self.create_amiibo_data_structure(head, tail)
+            amiibo_data = self.create_amiibo_data_structure(head, tail, amiibo_type, series)
             if amiibo_data is None:
                 return None
             
@@ -192,8 +287,6 @@ class AmiiboGenerator:
         for i, amiibo in enumerate(progress_iter, 1):
             name = amiibo.get('name', 'Unknown')
             series = amiibo.get('amiiboSeries', 'Unknown Series')
-            head = amiibo.get('head', '')
-            tail = amiibo.get('tail', '')
             
             # 進捗表示（tqdm未使用時のみ）
             if not tqdm:
@@ -215,11 +308,16 @@ class AmiiboGenerator:
             else:
                 target_dir = output_dir
             
-            # ファイル名をサニタイズし、IDを追加して重複を回避
+            # ファイル名をサニタイズし、IDを追加
             safe_name = self.sanitize_filename(name)
-            amiibo_id = head + tail
+            amiibo_id = amiibo.get('head', '') + amiibo.get('tail', '')
             filename = f"{safe_name}_{amiibo_id}.bin"
             filepath = os.path.join(target_dir, filename)
+            
+            # 重複チェック - 存在する場合は上書きしないでスキップ
+            if os.path.exists(filepath):
+                print(f"  -> File already exists, skipping: {filename}")
+                continue
             
             # ファイルを保存
             try:

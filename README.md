@@ -11,7 +11,7 @@
 - `8-Bit Mario Classic Color.bin` - テンプレート用Amiiboファイル（540バイト）
 - `amiibo_api_data.json` - AmiiboAPIから取得したデータ（932件のAmiibo情報）
 
-### 生成されるファイル
+### ツール
 - `generate_amiibos_from_api.py` - メインジェネレーター
 - `fetch_amiibo_data.py` - APIデータ取得ツール
 - `organize_amiibo.py` - ファイル整理ツール
@@ -24,22 +24,17 @@
 ```bash
 # 必要なPythonライブラリをインストール
 pip install pyamiibo tqdm
-
-# またはrequirements.txtがある場合
-pip install -r requirements.txt
 ```
 
 ### 2. ファイルの確認
 
-以下のファイルが存在することを確認してください：
+以下のファイルを用意して下さい：
 
 ```bash
-ls -la
-# 必須なファイル:
-# - key_retail.bin
-# - 8-Bit Mario Classic Color.bin
-# - amiibo_api_data.json
-# - generate_amiibos_from_api.py
+key_retail.bin
+```
+```bash
+8-Bit Mario Classic Color.bin
 ```
 
 ## 🎯 使い方
@@ -52,12 +47,12 @@ ls -la
 python3 fetch_amiibo_data.py
 ```
 
-これにより、`https://www.amiiboapi.com/api/amiibo/` から最新のAmiiboデータを取得し、`amiibo_api_data.json` に保存します。
+これにより、`https://www.amiiboapi.com/api/amiibo/` から最新のAmiiboデータを取得し、`amiibo_api_data.json` を作成します。
 
 #### 2. Amiiboファイルの一括生成
 
 ```bash
-# 基本的な生成（シリーズ別に整理）
+# 基本生成（シリーズ別に整理）
 python3 generate_amiibos_from_api.py
 
 # カスタマイズオプション
@@ -181,7 +176,7 @@ generated_amiibo_bins/
 - **ファイルサイズ**: 540バイト（NTAG215標準）
 - **暗号化方式**: pyamiiboライブラリを使用
 - **UID形式**: 7バイトUID（最初のバイトは04固定）
-- **データ構造**: 3dbrew仕様に準拠
+- **データ構造**: 3dbrewを参照
 
 ## 📊 サポートされているAmiibo
 
@@ -219,7 +214,9 @@ generated_amiibo_bins/
 #### 1. 「Key file not found」エラー
 
 **原因**: `key_retail.bin` ファイルが存在しない
-**解決策**: 
+
+**解決策**:
+
 ```bash
 # ファイルの存在を確認
 ls -la key_retail.bin
@@ -231,7 +228,9 @@ wc -c key_retail.bin
 #### 2. 「Template file not found」エラー
 
 **原因**: `8-Bit Mario Classic Color.bin` ファイルが存在しない
+
 **解決策**: 
+
 ```bash
 # ファイルの存在を確認
 ls -la "8-Bit Mario Classic Color.bin"
@@ -243,7 +242,9 @@ wc -c "8-Bit Mario Classic Color.bin"
 #### 3. 「pyamiibo library not found」エラー
 
 **原因**: pyamiiboライブラリがインストールされていない
+
 **解決策**: 
+
 ```bash
 pip install pyamiibo
 ```
@@ -251,7 +252,9 @@ pip install pyamiibo
 #### 4. 生成ファイルの検証エラー
 
 **原因**: 生成されたファイルが破損しているか、暗号化に問題がある
+
 **解決策**: 
+
 ```bash
 # 検証ツールで詳細を確認
 python3 verify_all_files.py --sample 5
@@ -263,7 +266,9 @@ python3 generate_amiibos_from_api.py --verify
 #### 5. ファイル名の文字化け
 
 **原因**: 特殊文字が含まれているAmiibo名
+
 **解決策**: 
+
 - プログラムが自動的にファイル名をサニタイズします
 - 文字化けが発生する場合は、手動でファイル名を変更してください
 
