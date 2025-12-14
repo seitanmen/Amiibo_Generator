@@ -1,4 +1,4 @@
-# Amiibo Converter - 使い方ガイド
+# Amiibo Generator - 使い方ガイド
 
 ## 📋 概要
 
