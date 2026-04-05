@@ -10,7 +10,7 @@ import urllib.error
 import time
 from typing import Dict, List, Optional
 
-API_URL = "https://www.amiiboapi.com/api/amiibo/"
+API_URL = "https://www.amiiboapi.org/api/amiibo/"
 
 def fetch_amiibo_data() -> Optional[Dict]:
     """
