@@ -109,7 +109,6 @@ python3 fetch_amiibo_data.py [オプション]
 
 オプション:
   --output-file FILE    出力ファイル名（デフォルト: amiibo_api_data.json）
-  --url URL            APIのURL（デフォルト: https://www.amiiboapi.com/api/amiibo/）
   --help                ヘルプを表示
 ```
 
